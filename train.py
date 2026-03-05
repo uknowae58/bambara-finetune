@@ -38,7 +38,6 @@ model = FastLanguageModel.get_peft_model(
     lora_alpha=16,
     lora_dropout=0,
     bias="none",
-    task_type="CAUSAL_LM",
 )
 
 # 3. Load dataset
