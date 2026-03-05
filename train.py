@@ -11,7 +11,7 @@ from transformers import TrainingArguments
 import os
 
 # Config
-MODEL_NAME = "Qwen/Qwen3-0.5B"
+MODEL_NAME = "Qwen/Qwen2.5-0.5B"
 MAX_seq_LENGTH = 2048
 DATASET_NAME = "oza75/bambara-lm-qa"
 OUTPUT_DIR = "./bambara-model"
