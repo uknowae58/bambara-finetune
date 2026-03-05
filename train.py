@@ -60,7 +60,6 @@ trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
     train_dataset=dataset,
-    max_seq_length=MAX_seq_LENGTH,
     training_arguments=TrainingArguments(
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=4,
