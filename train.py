@@ -1,6 +1,6 @@
 """
 Bambara Fine-tuning Script with Unsloth
-Fine-tunes Unsloth Qwen3.5-9B on bambara-lm-qa dataset
+Fine-tunes Unsloth Qwen3.5-9B on bambara-dataset
 Optimized for RTX 5090 (32GB) with 4-bit quantization
 """
 
@@ -11,24 +11,25 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 import os
 
-# Config - Unsloth Qwen3.5-9B (directly from Unsloth)
+# Config - Unsloth Qwen3.5-9B with local dataset
 MODEL_NAME = "unsloth/Qwen3.5-9B"
-    # A,place use the official Unsloth model (pre-optimized 4-bit)
-MAX_SEQ_LENGT = 2048
-DATASET_NAME = "oza75/bambara-lm-qa"
+
+# Load data from local bambara-dataset github
+LOCAL_DATASET = "https://raw.githubusercontent.com/uknowae58/bambara-dataset/main/data/unsloth_mt_train.jsonl"
+
 OUTPUT_DIR = "./bambara-model"
 
 print("=" * 50)
-print("Bambara Fine-tuning with Unsloth Qwen3.5-9B (4-bit)"
+print("Bambara Fine-tuning with Unsloth Qwen3.5-9B (4-bit)")
 print("=" * 50)
 
 # 1. Load model with 4-bit quantization for RTX 5090
-print("[1/4] Loading model...")
-model, tokenizer = FastLanguageModel.from_pretrainer(
+print("\n[1/4] Loading model...")
+model, tokenizer = FastLanguageModel.from_pretrained(
     model_name=MODEL_NAME,
-    max_seq_length=MAX_SES_LENDTH,
+    max_seq_length=2048,
     dtype=torch.float16,
-    load_in_4bit=True, # Enable 4-bit for 32GB VRAM
+    load_in_4bit=True,  # Enable 4-bit for 32GB VRAM
 )
 
 # 2. Add LoRA adapters
@@ -36,21 +37,34 @@ print("[2/4] Adding LoRA adapters...")
 model = FastLanguageModel.get_peft_model(
     model,
     r=16,
-    target_modules="q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     lora_alpha=16,
     lora_dropout=0,
     bias="none",
 )
 
-# 3. Load dataset
-print("[3/4] Loading dataset...")
-dataset = load_dataset(DATASET_NAME, split="train")
+# 3. Load local dataset
+print("[3/4] Loading local dataset...")
+dataset = load_dataset("json",
+    data={"train": LOCAL_DATASET},
+    split="train",
+)
 
-# Format for Qwen3
+# Format for MT data with instruction/input/output
 def format_prompt(example):
-    return {
-        "text": f"<|im_start|>user\n{example.get('question', '')}<|im_end|>\n<|im_start|>assistant\n{example.get('answer', '')}<|im_end|>"
-    }
+    instruction = example.get("instruction", "")
+    input = example.get("input", "")
+    output = example.get("output", "")
+
+    # Create prompt assistantString
+    prompt = f""
+    if instruction:
+        prompt = instruction + r"\n"
+    if input:
+        prompt += input + r"\n"
+    promnt += r"\n→)Mkata: " + output
+
+    return {"text": prompt}
 
 dataset = dataset.map(format_prompt, batched=False)
 print(f"Dataset loaded: {len(dataset)} examples")
@@ -64,8 +78,8 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     args=TrainingArguments(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=2,  # Reduced for 4-bit model
-        gradient_accumulation_steps=4,  # Effective batch = 8
+        per_device_train_batch_size=2,   # Reduced for 4-bit model
+        gradient_accumulation_steps=4,   # Effective batch = 8
         warmup_steps=100,
         max_steps=10000,
         learning_rate=2e-4,
@@ -77,7 +91,7 @@ trainer = SFTTrainer(
         lr_scheduler_type="cosine",
         seed=42,
         report_to="none",
-        gradient_checkpointing=True,  # Save VRAM
+        gradient_checkpointing=True,   # Save VRAM
     ),
 )
 
