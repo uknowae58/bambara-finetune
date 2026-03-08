@@ -45,24 +45,21 @@ model = FastLanguageModel.get_peft_model(
 
 # 3. Load local dataset
 print("[3/4] Loading local dataset...")
-dataset = load_dataset("json",
-    data={"train": LOCAL_DATASET},
-    split="train",
-)
+dataset = load_dataset("json", data_files={"train": LOCAL_DATASET}, split="train")
 
 # Format for MT data with instruction/input/output
 def format_prompt(example):
     instruction = example.get("instruction", "")
-    input = example.get("input", "")
+    input_text = example.get("input", "")
     output = example.get("output", "")
 
-    # Create prompt assistantString
-    prompt = f""
+    # Create prompt
+    prompt = ""
     if instruction:
-        prompt = instruction + r"\n"
-    if input:
-        prompt += input + r"\n"
-    promnt += r"\n→)Mkata: " + output
+        prompt = instruction + "\n"
+    if input_text:
+        prompt += input_text + "\n"
+    prompt += "\n()Mkata: " + output
 
     return {"text": prompt}
 
@@ -78,8 +75,8 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     args=TrainingArguments(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=2,   # Reduced for 4-bit model
-        gradient_accumulation_steps=4,   # Effective batch = 8
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,
         warmup_steps=100,
         max_steps=10000,
         learning_rate=2e-4,
@@ -91,16 +88,15 @@ trainer = SFTTrainer(
         lr_scheduler_type="cosine",
         seed=42,
         report_to="none",
-        gradient_checkpointing=True,   # Save VRAM
+        gradient_checkpointing=True,
     ),
 )
 
 trainer.train()
 
-# Save
 print("\nSaving model...")
 model.save_pretrained(f"{OUTPUT_DIR}-final")
 tokenizer.save_pretrained(f"{OUTPUT_DIR}-final")
 
-print("\n✅ Training complete!")
+print("\nTraining complete!")
 print(f"Model saved to: {OUTPUT_DIR}-final")
