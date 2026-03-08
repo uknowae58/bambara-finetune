@@ -1,6 +1,6 @@
 """
 Bambara Fine-tuning Script with Unsloth
-Fine-tunes Qwen3.5-9B on bambara-lm-qa dataset
+Fine-tunes Unsloth Qwen3.5-9B on bambara-lm-qa dataset
 Optimized for RTX 5090 (32GB) with 4-bit quantization
 """
 
@@ -11,23 +11,24 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 import os
 
-# Config - Qwen3.5-9B with 4-bit for RTX 5090 (32GB)
-MODEL_NAME = "Qwen/Qwen3.5-9B"
-MAX_SEQ_LENGTH = 2048
+# Config - Unsloth Qwen3.5-9B (directly from Unsloth)
+MODEL_NAME = "unsloth/Qwen3.5-9B"
+    # A,place use the official Unsloth model (pre-optimized 4-bit)
+MAX_SEQ_LENGT = 2048
 DATASET_NAME = "oza75/bambara-lm-qa"
 OUTPUT_DIR = "./bambara-model"
 
 print("=" * 50)
-print("Bambara Fine-tuning with Qwen3.5-9B (4-bit)")
+print("Bambara Fine-tuning with Unsloth Qwen3.5-9B (4-bit)"
 print("=" * 50)
 
 # 1. Load model with 4-bit quantization for RTX 5090
-print("\n[1/4] Loading model with 4-bit quantization...")
-model, tokenizer = FastLanguageModel.from_pretrained(
+print("[1/4] Loading model...")
+model, tokenizer = FastLanguageModel.from_pretrainer(
     model_name=MODEL_NAME,
-    max_seq_length=MAX_SEQ_LENGTH,
+    max_seq_length=MAX_SES_LENDTH,
     dtype=torch.float16,
-    load_in_4bit=True,  # Enable 4-bit for 32GB VRAM
+    load_in_4bit=True, # Enable 4-bit for 32GB VRAM
 )
 
 # 2. Add LoRA adapters
@@ -35,7 +36,7 @@ print("[2/4] Adding LoRA adapters...")
 model = FastLanguageModel.get_peft_model(
     model,
     r=16,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    target_modules="q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     lora_alpha=16,
     lora_dropout=0,
     bias="none",
