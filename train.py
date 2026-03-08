@@ -1,6 +1,7 @@
 """
 Bambara Fine-tuning Script with Unsloth
-Fine-tunes Qwen3.5 on bambara-lm-qa dataset
+Fine-tunes Qwen3.5-9B on bambara-lm-qa dataset
+Optimized for RTX 5090 (32GB) with 4-bit quantization
 """
 
 from unsloth import FastLanguageModel
@@ -10,23 +11,23 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 import os
 
-# Config
-MODEL_NAME = "Qwen/Qwen2.5-0.5B"
-MAX_seq_LENGTH = 2048
+# Config - Qwen3.5-9B with 4-bit for RTX 5090 (32GB)
+MODEL_NAME = "Qwen/Qwen3.5-9B"
+MAX_SEQ_LENGTH = 2048
 DATASET_NAME = "oza75/bambara-lm-qa"
 OUTPUT_DIR = "./bambara-model"
 
 print("=" * 50)
-print("Bambara Fine-tuning with Unsloth")
+print("Bambara Fine-tuning with Qwen3.5-9B (4-bit)")
 print("=" * 50)
 
-# 1. Load model
-print("\n[1/4] Loading model...")
+# 1. Load model with 4-bit quantization for RTX 5090
+print("\n[1/4] Loading model with 4-bit quantization...")
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name=MODEL_NAME,
-    max_seq_length=MAX_seq_LENGTH,
+    max_seq_length=MAX_SEQ_LENGTH,
     dtype=torch.float16,
-    load_in_4bit=True,
+    load_in_4bit=True,  # Enable 4-bit for 32GB VRAM
 )
 
 # 2. Add LoRA adapters
@@ -62,8 +63,8 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     args=TrainingArguments(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=4,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=2,  # Reduced for 4-bit model
+        gradient_accumulation_steps=4,  # Effective batch = 8
         warmup_steps=100,
         max_steps=10000,
         learning_rate=2e-4,
@@ -75,6 +76,7 @@ trainer = SFTTrainer(
         lr_scheduler_type="cosine",
         seed=42,
         report_to="none",
+        gradient_checkpointing=True,  # Save VRAM
     ),
 )
 
